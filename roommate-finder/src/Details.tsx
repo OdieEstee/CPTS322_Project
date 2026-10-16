@@ -1,12 +1,25 @@
-/// created the deatails functionalituy where the information 
-/// will be taken from the login page and it will be snet to express data base and 
-/// it will create a server to parse the data and then corse will be used to communitcate the the details to 
-/// the log in page. 
+
+/*
+ * Details.tsx
+ *
+ * Collects user information for the Roommate Finder application.
+ * Information includes name, age, hobbies, bedtime, cleanliness,
+ * quiet hours, and pet preferences.
+ *
+ * When the user submits the form, the information is converted
+ * into JSON and sent to the Express backend using an HTTP POST request.
+ *
+ * The Express server will validate and save the information into
+ * a temporary text file.
+ *
+ * CORS allows the React frontend to communicate with the
+ * Express backend running on a different port.
+ */
 
 import { useState } from "react";
-import type { FormEvent, ChangeEvent } from "react";
+import type { SubmitEvent, ChangeEvent } from "react";
 
-// Defines what information we collect from the user
+// Defines the information collected from the user
 interface UserDetails {
   name: string;
   age: string;
@@ -16,25 +29,26 @@ interface UserDetails {
   quietHoursStart: string;
   quietHoursEnd: string;
   pets: string;
-
 }
 
 function Details() {
 
-  // Stores all the user information
+  // Stores all user information in one state object
   const [userDetails, setUserDetails] = useState<UserDetails>({
-  name: "",
-  age: "",
-  hobbies: "",
-  bedtime: "",
-  cleanliness: "",
-  quietHoursStart: "",
-  quietHoursEnd: "",
-  pets: ""
+    name: "",
+    age: "",
+    hobbies: "",
+    bedtime: "",
+    cleanliness: "",
+    quietHoursStart: "",
+    quietHoursEnd: "",
+    pets: ""
   });
 
-  // Updates the information as the user types
-  function handleChange(e: ChangeEvent<HTMLInputElement>) {
+  // Updates the corresponding field when the user changes an input
+  function handleChange(
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) {
     const { name, value } = e.target;
 
     setUserDetails(prev => ({
@@ -43,11 +57,12 @@ function Details() {
     }));
   }
 
-  // Sends user information to the Express server
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  // Sends the collected information to the Express server
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
     try {
+      // Sends user information as JSON to the backend
       const response = await fetch("http://localhost:3001/api/details", {
         method: "POST",
         headers: {
@@ -56,24 +71,30 @@ function Details() {
         body: JSON.stringify(userDetails)
       });
 
+      // Checks if the server successfully received the information
       if (!response.ok) {
         throw new Error("Failed to save user details");
       }
 
       alert("User details saved successfully!");
+
     } catch (error) {
-      console.error(error);
-      alert("Error saving details");
+      console.error("Error saving user details:", error);
+      alert("Error saving details. Please try again.");
     }
   }
 
   return (
     <div>
       <h1>Roommate Details</h1>
+      <p>Please enter your information and living preferences.</p>
 
       <form onSubmit={handleSubmit}>
-        <label>Name:</label>
+
+        {/* User's name */}
+        <label htmlFor="name">Name:</label>
         <input
+          id="name"
           type="text"
           name="name"
           value={userDetails.name}
@@ -81,65 +102,94 @@ function Details() {
           required
         />
 
-        <label>Age:</label>
+        {/* User's age */}
+        <label htmlFor="age">Age:</label>
         <input
+          id="age"
           type="number"
           name="age"
           min="18"
+          step="1"
           value={userDetails.age}
           onChange={handleChange}
           required
         />
 
-        <label>Hobbies:</label>
+        {/* User's hobbies */}
+        <label htmlFor="hobbies">Hobbies:</label>
         <input
+          id="hobbies"
           type="text"
           name="hobbies"
           value={userDetails.hobbies}
           onChange={handleChange}
+          placeholder="Gaming, hiking, sports..."
         />
 
-        <label>Bedtime:</label>
+        {/* User's preferred bedtime */}
+        <label htmlFor="bedtime">Bedtime:</label>
         <input
+          id="bedtime"
           type="time"
           name="bedtime"
           value={userDetails.bedtime}
           onChange={handleChange}
         />
 
-        <label>Cleanliness:</label>
-        <input
-          type="text"
+        {/* User's cleanliness preference */}
+        <label htmlFor="cleanliness">Cleanliness:</label>
+        <select
+          id="cleanliness"
           name="cleanliness"
           value={userDetails.cleanliness}
           onChange={handleChange}
-        />
+          required
+        >
+          <option value="">Select cleanliness</option>
+          <option value="relaxed">Relaxed</option>
+          <option value="moderate">Moderate</option>
+          <option value="very-clean">Very Clean</option>
+        </select>
 
-        <label>Quiet Hours Start:</label>
+        {/* User's preferred quiet hours */}
+        <label htmlFor="quietHoursStart">Quiet Hours Start:</label>
         <input
+          id="quietHoursStart"
           type="time"
           name="quietHoursStart"
           value={userDetails.quietHoursStart}
           onChange={handleChange}
         />
 
-        <label>Quiet Hours End:</label>
+        <label htmlFor="quietHoursEnd">Quiet Hours End:</label>
         <input
+          id="quietHoursEnd"
           type="time"
           name="quietHoursEnd"
           value={userDetails.quietHoursEnd}
           onChange={handleChange}
         />
 
-        <label>Pets:</label>
-        <input
-          type="text"
+        {/* User's pet preferences */}
+        <label htmlFor="pets">
+          Are you comfortable living with pets?
+        </label>
+        <select
+          id="pets"
           name="pets"
           value={userDetails.pets}
           onChange={handleChange}
-        />
+          required
+        >
+          <option value="">Select an option</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+          <option value="depends">Depends on the animal</option>
+        </select>
 
+        {/* Submits the information to the backend */}
         <button type="submit">Save Details</button>
+
       </form>
     </div>
   );
