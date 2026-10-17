@@ -1,0 +1,12 @@
+# Ignore Node.js dependencies
+node_modules/
+
+# Ignore temporary user data
+userDetails.txt
+
+# Ignore environment files
+.env
+.env.*
+
+# Ignore generated build files
+dist
