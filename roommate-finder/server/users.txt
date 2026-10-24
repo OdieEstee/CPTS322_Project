@@ -1,0 +1,6 @@
+[
+  {
+    "email": "test@gmail.com",
+    "passwordHash": "$2b$12$H25ttUgrqZvXznCGtNntWeg/eelMlC/BgUVxqZs240eGLEKTFytXK"
+  }
+]
