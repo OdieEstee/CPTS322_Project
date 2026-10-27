@@ -18,8 +18,9 @@
 
 import { useState } from "react";
 import type { SubmitEvent, ChangeEvent } from "react";
+import "./Details.css";
 
-// Defines the information collected from the user
+// Defines the roommate information collected from the user
 interface UserDetails {
   name: string;
   age: string;
@@ -31,9 +32,15 @@ interface UserDetails {
   pets: string;
 }
 
-function Details() {
+// Defines the information passed from main.tsx
+interface DetailsProps {
+  userId: string;
+}
 
-  // Stores all user information in one state object
+// Receives the user ID from main.tsx
+function Details({ userId }: DetailsProps) {
+
+  // Stores all roommate information in one state object
   const [userDetails, setUserDetails] = useState<UserDetails>({
     name: "",
     age: "",
@@ -57,35 +64,43 @@ function Details() {
     }));
   }
 
-  // Sends the collected information to the Express server
-  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
+/*
+ * Sends the user's preferences to Express.
+ * The userId identifies which profile is being saved.
+ * PUT creates or updates the user's saved information.
+ */
+async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
+  // Prevents the page from refreshing.
+  e.preventDefault();
 
-    try {
-      // Sends user information as JSON to the backend
-      const response = await fetch("http://localhost:3001/api/details", {
-        method: "POST",
+  try {
+    // Sends user information to the correct profile.
+    const response = await fetch(
+      `http://localhost:3001/api/details/${encodeURIComponent(userId)}`,
+      {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify(userDetails)
-      });
-
-      // Checks if the server successfully received the information
-      if (!response.ok) {
-        throw new Error("Failed to save user details");
       }
+    );
 
-      alert("User details saved successfully!");
-
-    } catch (error) {
-      console.error("Error saving user details:", error);
-      alert("Error saving details. Please try again.");
+    // Checks whether Express successfully saved it.
+    if (!response.ok) {
+      throw new Error("Failed to save user details");
     }
+
+    alert("User details saved successfully!");
+
+  } catch (error) {
+    console.error("Error saving user details:", error);
+    alert("Error saving details. Please try again.");
   }
+}
 
   return (
-    <div>
+    <div className="details-page">
       <h1>Roommate Details</h1>
       <p>Please enter your information and living preferences.</p>
 
@@ -170,7 +185,7 @@ function Details() {
           onChange={handleChange}
         />
 
-        {/* User's pet preferences */}
+        {/* User's pet preferences; gave options so no errors could be given by user */}
         <label htmlFor="pets">
           Are you comfortable living with pets?
         </label>

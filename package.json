@@ -1,0 +1,24 @@
+{
+  "name": "cpts322_project",
+  "version": "1.0.0",
+  "description": "The semester project made for CPTS 322 at WSU",
+  "main": "index.js",
+  "scripts": {
+  "dev": "concurrently -k -n REACT,EXPRESS \"npm run dev --prefix roommate-finder\" \"npm run dev --prefix server\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OdieEstee/CPTS322_Project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/OdieEstee/CPTS322_Project/issues"
+  },
+  "homepage": "https://github.com/OdieEstee/CPTS322_Project#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}
