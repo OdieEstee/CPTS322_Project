@@ -152,8 +152,6 @@ function Login() {
                 : "Log In"}
           </button>
         </form>
-
-
       </section>
     </main>
   );
