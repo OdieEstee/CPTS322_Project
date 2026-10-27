@@ -1,0 +1,179 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  color: #202321;
+  background: #f3f5f1;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 36px;
+  background: white;
+  border: 1px solid #e6e9e3;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgb(30 50 30 / 7%);
+}
+
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 16px;
+  border-radius: 14px;
+  background: #dff3df;
+  color: #27643c;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+h1,
+h2,
+.subtitle,
+.description {
+  text-align: center;
+}
+
+h1 {
+  margin: 0;
+  color: #27643c;
+  font-size: 25px;
+}
+
+.subtitle {
+  margin: 8px 0 26px;
+  color: #6c746d;
+  font-size: 14px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 26px;
+  border-radius: 10px;
+  background: #f0f2ef;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #687069;
+}
+
+.tabs button.active {
+  background: white;
+  color: #27643c;
+  box-shadow: 0 1px 4px #00000012;
+  font-weight: 600;
+}
+
+h2 {
+  margin: 0;
+  color: #27643c;
+  font-size: 21px;
+}
+
+.description {
+  margin: 9px 0 24px;
+  color: #737a73;
+  font-size: 14px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+label {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #d9ded8;
+  border-radius: 9px;
+  outline: none;
+}
+
+input:focus {
+  border-color: #47875a;
+  box-shadow: 0 0 0 3px #47875a20;
+}
+
+.submit-button {
+  margin-top: 12px;
+  padding: 13px;
+  border: 0;
+  border-radius: 9px;
+  background: #27643c;
+  color: white;
+  font-weight: 650;
+}
+
+.submit-button:hover {
+  background: #1e5030;
+}
+
+.submit-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.message {
+  margin: 8px 0 0;
+  color: #27643c;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.switch-text {
+  margin: 22px 0 0;
+  text-align: center;
+  color: #707770;
+  font-size: 13px;
+}
+
+.switch-text button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #27643c;
+  font-weight: 650;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 26px 20px;
+  }
+}
