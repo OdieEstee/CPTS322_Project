@@ -1,0 +1,49 @@
+
+/* Dark background for the Details page */
+.details-page {
+  width: 100%;
+  min-height: 100vh;
+  padding: 48px 20px 64px;
+  color: #eff4ff;
+  background: linear-gradient(
+    135deg,
+    #0b1020 0%,
+    #151c31 100%
+  );
+}
+
+/* Centered container for the questions */
+.details-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 32px;
+  background: #1b2439;
+  border: 1px solid #39445d;
+  border-radius: 24px;
+}
+
+/* Rounded boxes for answers and dropdowns */
+.details-page form input,
+.details-page form select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid #4a5875;
+  border-radius: 12px;
+  background: #101a2e;
+  color: white;
+}
+
+/* Blue button for saving information */
+.details-page form button[type="submit"] {
+  margin-top: 22px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: #5e8bff;
+  color: #081226;
+  font-weight: bold;
+  cursor: pointer;
+}
