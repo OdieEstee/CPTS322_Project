@@ -1,5 +1,3 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import Login from './Login.tsx'
@@ -12,10 +10,8 @@ import Details from "./Details";
 // Temporarily displays the Details page for testing.
 // Uses a fictional user ID to save and load preferences.
 createRoot(document.getElementById("root")!).render(
+  //<Login />
   <StrictMode>
-    <Login />
-  </StrictMode>,
-)
     <Details userId="demo-user-1" />
   </StrictMode>
 );

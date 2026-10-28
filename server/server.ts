@@ -27,8 +27,6 @@ interface UserDetails {
   hobbies: string;
   bedtime: string;
   cleanliness: string;
-  quietHoursStart: string;
-  quietHoursEnd: string;
   pets: string;
 }
 
@@ -123,8 +121,6 @@ function validDetails(value: unknown): value is UserDetails {
     data.hobbies.length <= 500 &&
 
     validTime(data.bedtime) &&
-    validTime(data.quietHoursStart) &&
-    validTime(data.quietHoursEnd) &&
 
     typeof data.cleanliness === "string" &&
     ["relaxed", "moderate", "very-clean"]

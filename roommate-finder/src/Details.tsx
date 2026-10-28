@@ -4,7 +4,7 @@
  *
  * Collects user information for the Roommate Finder application.
  * Information includes name, age, hobbies, bedtime, cleanliness,
- * quiet hours, and pet preferences.
+ * and pet preferences.
  *
  * When the user submits the form, the information is converted
  * into JSON and sent to the Express backend using an HTTP POST request.
@@ -27,8 +27,6 @@ interface UserDetails {
   hobbies: string;
   bedtime: string;
   cleanliness: string;
-  quietHoursStart: string;
-  quietHoursEnd: string;
   pets: string;
 }
 
@@ -47,8 +45,6 @@ function Details({ userId }: DetailsProps) {
     hobbies: "",
     bedtime: "",
     cleanliness: "",
-    quietHoursStart: "",
-    quietHoursEnd: "",
     pets: ""
   });
 
@@ -100,11 +96,15 @@ async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
 }
 
   return (
-    <div className="details-page">
-      <h1>Roommate Details</h1>
-      <p>Please enter your information and living preferences.</p>
+    <main className="page">
+      <section className="details-card">
+        <div className="brand-mark">R</div>
+        <h1>Roommate Details</h1>
+        <p className="subtitle">
+          Please enter your information and living preferences.
+        </p>
 
-      <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
 
         {/* User's name */}
         <label htmlFor="name">Name:</label>
@@ -141,49 +141,34 @@ async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
           placeholder="Gaming, hiking, sports..."
         />
 
-        {/* User's preferred bedtime */}
-        <label htmlFor="bedtime">Bedtime:</label>
-        <input
-          id="bedtime"
-          type="time"
-          name="bedtime"
-          value={userDetails.bedtime}
-          onChange={handleChange}
-        />
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="bedtime">Bedtime:</label>
+            <input
+              id="bedtime"
+              type="time"
+              name="bedtime"
+              value={userDetails.bedtime}
+              onChange={handleChange}
+            />
+          </div>
 
-        {/* User's cleanliness preference */}
-        <label htmlFor="cleanliness">Cleanliness:</label>
-        <select
-          id="cleanliness"
-          name="cleanliness"
-          value={userDetails.cleanliness}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Select cleanliness</option>
-          <option value="relaxed">Relaxed</option>
-          <option value="moderate">Moderate</option>
-          <option value="very-clean">Very Clean</option>
-        </select>
-
-        {/* User's preferred quiet hours */}
-        <label htmlFor="quietHoursStart">Quiet Hours Start:</label>
-        <input
-          id="quietHoursStart"
-          type="time"
-          name="quietHoursStart"
-          value={userDetails.quietHoursStart}
-          onChange={handleChange}
-        />
-
-        <label htmlFor="quietHoursEnd">Quiet Hours End:</label>
-        <input
-          id="quietHoursEnd"
-          type="time"
-          name="quietHoursEnd"
-          value={userDetails.quietHoursEnd}
-          onChange={handleChange}
-        />
+          <div className="field">
+            <label htmlFor="cleanliness">Cleanliness:</label>
+            <select
+              id="cleanliness"
+              name="cleanliness"
+              value={userDetails.cleanliness}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select cleanliness</option>
+              <option value="relaxed">Relaxed</option>
+              <option value="moderate">Moderate</option>
+              <option value="very-clean">Very Clean</option>
+            </select>
+          </div>
+        </div>
 
         {/* User's pet preferences; gave options so no errors could be given by user */}
         <label htmlFor="pets">
@@ -203,10 +188,13 @@ async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
         </select>
 
         {/* Submits the information to the backend */}
-        <button type="submit">Save Details</button>
+        <button className="submit-button" type="submit">
+          Save Details
+        </button>
 
-      </form>
-    </div>
+        </form>
+      </section>
+    </main>
   );
 }
 
