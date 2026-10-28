@@ -6,17 +6,19 @@
  * Information includes name, age, hobbies, bedtime, cleanliness,
  * and pet preferences.
  *
- * When the user submits the form, the information is converted
- * into JSON and sent to the Express backend using an HTTP POST request.
+ * When the page opens, it loads the user's saved details from the
+ * Express backend (server.js) and fills in the fields. A brand-new
+ * account has empty details, so the fields start blank.
  *
- * The Express server will validate and save the information into
- * a temporary text file.
+ * When the user submits the form, the information is converted
+ * into JSON and sent to the backend using an HTTP PUT request, which
+ * saves it inside that user's record in users.txt.
  *
  * CORS allows the React frontend to communicate with the
  * Express backend running on a different port.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SubmitEvent, ChangeEvent } from "react";
 import "./Details.css";
 
@@ -30,12 +32,12 @@ interface UserDetails {
   pets: string;
 }
 
-// Defines the information passed from main.tsx
+// Defines the information passed from App.tsx
 interface DetailsProps {
   userId: string;
 }
 
-// Receives the user ID from main.tsx
+// Receives the logged-in user's ID from App.tsx
 function Details({ userId }: DetailsProps) {
 
   // Stores all roommate information in one state object
@@ -47,6 +49,38 @@ function Details({ userId }: DetailsProps) {
     cleanliness: "",
     pets: ""
   });
+
+  // Loads the user's saved details and fills in the form.
+  // A freshly created account returns empty strings, so fields stay blank.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDetails() {
+      try {
+        const response = await fetch(
+          `http://localhost:3001/api/details/${encodeURIComponent(userId)}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load user details");
+        }
+
+        const saved: Partial<UserDetails> = await response.json();
+
+        if (!cancelled) {
+          setUserDetails(prev => ({ ...prev, ...saved }));
+        }
+      } catch (error) {
+        console.error("Error loading user details:", error);
+      }
+    }
+
+    loadDetails();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Updates the corresponding field when the user changes an input
   function handleChange(

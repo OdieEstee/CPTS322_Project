@@ -1,17 +1,12 @@
-import './index.css'
-import App from './App.tsx'
-import Login from './Login.tsx'
-
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import Details from "./Details";
+import App from "./App.tsx";
 
-// Temporarily displays the Details page for testing.
-// Uses a fictional user ID to save and load preferences.
+// App starts on the Login page and moves to Details after
+// the user logs in or creates an account.
 createRoot(document.getElementById("root")!).render(
-  //<Login />
   <StrictMode>
-    <Details userId="demo-user-1" />
+    <App />
   </StrictMode>
 );
