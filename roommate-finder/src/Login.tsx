@@ -1,10 +1,16 @@
 
 import { useState } from "react";
 import "./Login.css";
+import type { AuthUser } from "./App.tsx";
 
 type Mode = "login" | "signup";
 
-function Login() {
+// Called with the logged-in user so App can show the Details page.
+interface LoginProps {
+  onAuthenticated: (user: AuthUser) => void;
+}
+
+function Login({ onAuthenticated }: LoginProps) {
   const [mode, setMode] = useState<Mode>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,12 +42,10 @@ function Login() {
         throw new Error(data.message || "Request failed.");
       }
 
-      setMessage(data.message);
       setPassword("");
 
-      if (mode === "signup") {
-        setMode("login");
-      }
+      // Both a new account and a successful login go to the Details page.
+      onAuthenticated(data.user);
     } catch (error) {
       setMessage(
         error instanceof Error

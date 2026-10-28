@@ -4,7 +4,7 @@
   "description": "The semester project made for CPTS 322 at WSU",
   "main": "index.js",
   "scripts": {
-  "dev": "concurrently -k -n REACT,EXPRESS \"npm run dev --prefix roommate-finder\" \"npm run dev --prefix server\""
+  "dev": "concurrently -k -n REACT,EXPRESS \"npm run dev --prefix roommate-finder\" \"npm run server --prefix roommate-finder\""
   },
   "repository": {
     "type": "git",
