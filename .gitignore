@@ -5,9 +5,11 @@ node_modules/
 userDetails.txt
 users.txt
 
-# Ignore environment files
+# Ignore environment files (real passwords live here)
 .env
 .env.*
+# ...but DO commit the template every developer copies
+!.env.example
 
 # Ignore generated build files
 dist

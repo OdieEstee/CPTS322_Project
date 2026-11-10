@@ -1,0 +1,64 @@
+# =============================================================================
+# docker-compose.yml
+# -----------------------------------------------------------------------------
+# PURPOSE:
+#   Runs the PostgreSQL database for Roommate Finder inside a Docker container,
+#   so every developer gets the same database version and the same tables
+#   without installing PostgreSQL on their own laptop.
+#
+# HOW TO USE (from the project's top folder, where this file is):
+#   1. Install Docker Desktop and make sure it is running.
+#   2. Copy .env.example to .env (and change the password if you like).
+#   3. Start the database:   npm run db:up      (same as: docker compose up -d)
+#   4. Stop the database:    npm run db:down    (your data is kept)
+#   5. Wipe all data and rebuild the tables from db/init.sql:
+#                            npm run db:reset   (same as: docker compose down -v)
+#
+# To look inside the database by hand:
+#   docker exec -it roommate_db psql -U roommate_user -d roommate_finder
+# =============================================================================
+
+services:
+  db:
+    # Official PostgreSQL image. Pinning the major version (16) means everyone
+    # on the team runs the same version and an upgrade can't surprise you.
+    image: postgres:16
+
+    # A fixed name so commands like "docker exec" can find the container.
+    container_name: roommate_db
+
+    # Restart the database automatically if it crashes or Docker restarts.
+    restart: unless-stopped
+
+    # Docker reads these values from the .env file next to this file.
+    # Passwords are never written here because this file is committed to Git.
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    # Makes the database reachable from your laptop at localhost:5432,
+    # which is where the Express server (server/db.js) connects.
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      # Named volume: keeps the data saved when the container is stopped or
+      # removed. Without it, every restart would erase all accounts.
+      - roommate_data:/var/lib/postgresql/data
+
+      # Every .sql file in ./db runs automatically the first time the
+      # database is created. db/init.sql builds the tables.
+      - ./db:/docker-entrypoint-initdb.d:ro
+
+    # Lets Docker report when the database is actually ready for connections,
+    # not just "started" (visible in: docker compose ps).
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# Declares the named volume used above for permanent storage.
+volumes:
+  roommate_data:
