@@ -5,22 +5,21 @@
  * POST /api/login            Logs into an existing account.
  * GET  /api/details/:userId  Returns a user's saved details.
  * PUT  /api/details/:userId  Creates or updates a user's details.
- * GET  /api/health           Confirms the backend is running.
+ * GET  /api/health           Confirms the backend (and database) is running.
  *
- * Every user is stored as ONE JSON object in users.txt:
+ * All data is stored in PostgreSQL (it used to be in users.txt).
+ * The tables are defined in db/init.sql in the project's top folder:
  *
- *   {
- *     "id": "…",
- *     "email": "you@example.com",
- *     "passwordHash": "…",
- *     "details": {
- *       "name": "", "age": "", "hobbies": "",
- *       "bedtime": "", "cleanliness": "", "pets": ""
- *     }
- *   }
+ *   users         id, email, password_hash, created_at
+ *   user_details  user_id, name, age, hobbies, bedtime, cleanliness, pets
  *
- * A freshly created account has empty strings for every details field
- * until the user fills them in on the Details page.
+ * The API sends and receives exactly the same JSON as before, so the React
+ * frontend did not need any changes.
+ *
+ * SAFETY NOTE: every query passes user input as a parameter ($1, $2, ...)
+ * instead of gluing it into the SQL text. PostgreSQL then treats the input
+ * strictly as data, which prevents SQL injection attacks. Keep doing this
+ * for every new query.
  *
  * NOTE: user IDs are not a real authentication mechanism yet.
  */
@@ -28,28 +27,15 @@
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { pool, checkDatabaseConnection } from "./db.js";
 
 const app = express();
 const PORT = 3001;
 
-const USERS_FILE = path.join(__dirname, "users.txt");
-
-// The fields collected on the Details page.
-const DETAIL_FIELDS = [
-  "name",
-  "age",
-  "hobbies",
-  "bedtime",
-  "cleanliness",
-  "pets"
-];
+// PostgreSQL error codes this file reacts to.
+// Full list: https://www.postgresql.org/docs/16/errcodes-appendix.html
+const UNIQUE_VIOLATION = "23505"; // e.g. an email that is already registered
+const FOREIGN_KEY_VIOLATION = "23503"; // e.g. details for a user that doesn't exist
 
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json({ limit: "16kb" }));
@@ -59,65 +45,30 @@ app.use(express.json({ limit: "16kb" }));
  * Helpers
  * ------------------------------------------------------------- */
 
-// Returns a details object with every field set to "".
+// What the Details page receives for a user who hasn't saved details yet.
 function emptyDetails() {
-  return Object.fromEntries(DETAIL_FIELDS.map((field) => [field, ""]));
-}
-
-// Makes sure a stored user record has an id and a complete details object.
-// This also upgrades older records that only had email + passwordHash.
-function normalizeUser(user) {
-  const details = { ...emptyDetails() };
-  if (user.details && typeof user.details === "object") {
-    for (const field of DETAIL_FIELDS) {
-      if (typeof user.details[field] === "string") {
-        details[field] = user.details[field];
-      }
-    }
-  }
   return {
-    id: typeof user.id === "string" ? user.id : randomUUID(),
-    email: user.email,
-    passwordHash: user.passwordHash,
-    details
+    name: "",
+    age: "",
+    hobbies: "",
+    bedtime: "",
+    cleanliness: "",
+    pets: ""
   };
 }
 
 // What the frontend is allowed to see about a user (never the hash).
-function publicUser(user) {
-  return { id: user.id, email: user.email };
+function publicUser(row) {
+  return { id: row.id, email: row.email };
 }
 
-// Read all user records from users.txt.
-async function readUsers() {
-  try {
-    const contents = await fs.readFile(USERS_FILE, "utf8");
-    const parsed = JSON.parse(contents);
-    if (!Array.isArray(parsed)) {
-      throw new Error("Invalid users.txt format");
-    }
-    return parsed.map(normalizeUser);
-  } catch (error) {
-    // No file yet means no accounts yet.
-    if (error.code === "ENOENT") {
-      return [];
-    }
-    throw error;
-  }
-}
-
-// Write all user records back to users.txt.
-async function writeUsers(users) {
-  await fs.writeFile(
-    USERS_FILE,
-    JSON.stringify(users, null, 2) + "\n",
-    "utf8"
-  );
-}
-
-// Checks that a user ID only uses safe characters.
+// Checks that a user ID is a UUID (the format the users table generates).
+// Checking first means a bad ID gets a clear 400 instead of a database error.
 function validUserId(value) {
-  return typeof value === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(value);
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  );
 }
 
 // Accepts an empty string or a valid 24-hour time (e.g. 23:00).
@@ -129,6 +80,7 @@ function validTime(value) {
 }
 
 // Validates submitted details before saving them.
+// (The database has matching CHECK rules as a second line of defense.)
 function validDetails(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -165,7 +117,8 @@ function validDetails(value) {
  * Account endpoints
  * ------------------------------------------------------------- */
 
-// Sign up: creates a new user with empty details.
+// Sign up: creates a new row in the users table. No details row is made yet;
+// that happens the first time the user saves the Details page.
 app.post("/api/signup", async (req, res) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
@@ -179,39 +132,42 @@ app.post("/api/signup", async (req, res) => {
       password.length > 128
     ) {
       return res.status(400).json({
-        message: "Enter a valid email and a password of 8–128 characters."
+        message: "Enter a valid email and a password of 8-128 characters."
       });
     }
 
-    const users = await readUsers();
+    // Hash the password with bcrypt (12 rounds) so the real password is
+    // never stored anywhere.
+    const passwordHash = await bcrypt.hash(password, 12);
 
-    if (users.some((user) => user.email === email)) {
+    // Insert the new account. PostgreSQL creates the id automatically, and
+    // RETURNING sends back the new row so we don't need a second query.
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash)
+       VALUES ($1, $2)
+       RETURNING id, email`,
+      [email, passwordHash]
+    );
+
+    res.status(201).json({
+      message: "Account created successfully!",
+      user: publicUser(result.rows[0])
+    });
+  } catch (error) {
+    // The UNIQUE rule on users.email rejected the insert: the email is taken.
+    // Letting the database check this (instead of searching first) also
+    // works correctly when two people sign up with the same email at once.
+    if (error.code === UNIQUE_VIOLATION) {
       return res.status(409).json({
         message: "An account with that email already exists."
       });
     }
-
-    const newUser = {
-      id: randomUUID(),
-      email,
-      passwordHash: await bcrypt.hash(password, 12),
-      details: emptyDetails()
-    };
-
-    users.push(newUser);
-    await writeUsers(users);
-
-    res.status(201).json({
-      message: "Account created successfully!",
-      user: publicUser(newUser)
-    });
-  } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Something went wrong on the server." });
   }
 });
 
-// Log in: checks the password and returns the user's id.
+// Log in: finds the user by email, checks the password, returns their id.
 app.post("/api/login", async (req, res) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
@@ -227,17 +183,23 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
-    const users = await readUsers();
-    const user = users.find((item) => item.email === email);
+    // Look up just this one user. The index on email makes this fast,
+    // instead of reading every account the way users.txt had to.
+    const result = await pool.query(
+      `SELECT id, email, password_hash
+       FROM users
+       WHERE email = $1`,
+      [email]
+    );
+    const user = result.rows[0];
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    // Same message whether the email or the password is wrong, so nobody
+    // can use this page to find out which emails have accounts.
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({
         message: "Incorrect email or password."
       });
     }
-
-    // Saves any upgrades made by normalizeUser (e.g. a newly assigned id).
-    await writeUsers(users);
 
     res.json({
       message: "Logged in successfully!",
@@ -263,21 +225,51 @@ app.get("/api/details/:userId", async (req, res) => {
   }
 
   try {
-    const users = await readUsers();
-    const user = users.find((item) => item.id === userId);
+    // LEFT JOIN returns the user even when they have no details row yet
+    // (the details columns are then NULL).
+    // age::text and to_char(...) turn the stored number and time back into
+    // the strings the frontend expects, e.g. 21 -> "21", 23:00:00 -> "23:00".
+    const result = await pool.query(
+      `SELECT d.user_id IS NOT NULL         AS has_details,
+              d.name,
+              d.age::text                   AS age,
+              d.hobbies,
+              to_char(d.bedtime, 'HH24:MI') AS bedtime,
+              d.cleanliness,
+              d.pets
+       FROM users u
+       LEFT JOIN user_details d ON d.user_id = u.id
+       WHERE u.id = $1`,
+      [userId]
+    );
 
-    if (!user) {
+    // No row at all means no user with that id.
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user.details);
+    const row = result.rows[0];
+
+    // A user who hasn't filled in the form yet gets empty strings.
+    if (!row.has_details) {
+      return res.status(200).json(emptyDetails());
+    }
+
+    res.status(200).json({
+      name: row.name,
+      age: row.age,
+      hobbies: row.hobbies,
+      bedtime: row.bedtime ?? "", // NULL bedtime -> "" for the form
+      cleanliness: row.cleanliness,
+      pets: row.pets
+    });
   } catch (error) {
     console.error("Error loading details:", error);
     res.status(500).json({ message: "Unable to load user details" });
   }
 });
 
-// Saves the user's details inside their single user record.
+// Saves the user's details: creates their row the first time, updates it after.
 app.put("/api/details/:userId", async (req, res) => {
   const { userId } = req.params;
   const details = req.body;
@@ -287,26 +279,39 @@ app.put("/api/details/:userId", async (req, res) => {
   }
 
   try {
-    const users = await readUsers();
-    const user = users.find((item) => item.id === userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    user.details = {
-      name: details.name.trim(),
-      age: details.age,
-      hobbies: details.hobbies,
-      bedtime: details.bedtime,
-      cleanliness: details.cleanliness,
-      pets: details.pets
-    };
-
-    await writeUsers(users);
+    // "Upsert" = insert, or update if a row already exists.
+    // ON CONFLICT (user_id) fires when this user already has a details row,
+    // and then the existing row is updated with the new values (EXCLUDED
+    // means "the values we just tried to insert").
+    await pool.query(
+      `INSERT INTO user_details
+         (user_id, name, age, hobbies, bedtime, cleanliness, pets)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (user_id) DO UPDATE SET
+         name        = EXCLUDED.name,
+         age         = EXCLUDED.age,
+         hobbies     = EXCLUDED.hobbies,
+         bedtime     = EXCLUDED.bedtime,
+         cleanliness = EXCLUDED.cleanliness,
+         pets        = EXCLUDED.pets,
+         updated_at  = NOW()`,
+      [
+        userId,
+        details.name.trim(),
+        Number(details.age), // stored as a number
+        details.hobbies,
+        details.bedtime === "" ? null : details.bedtime, // "" -> no bedtime
+        details.cleanliness,
+        details.pets
+      ]
+    );
 
     res.status(200).json({ message: "Roommate preferences saved successfully" });
   } catch (error) {
+    // The foreign key rejected the row: no user has this id.
+    if (error.code === FOREIGN_KEY_VIOLATION) {
+      return res.status(404).json({ message: "User not found" });
+    }
     console.error("Error saving details:", error);
     res.status(500).json({ message: "Unable to save user details" });
   }
@@ -317,10 +322,21 @@ app.put("/api/details/:userId", async (req, res) => {
  * Health check + start
  * ------------------------------------------------------------- */
 
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", service: "Roommate Finder backend" });
+// Reports whether the server is up AND can reach the database.
+app.get("/api/health", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ status: "ok", service: "Roommate Finder backend", database: "ok" });
+  } catch {
+    res.status(503).json({
+      status: "error",
+      service: "Roommate Finder backend",
+      database: "unreachable"
+    });
+  }
 });
 
 app.listen(PORT, () => {
   console.log(`Backend running at http://localhost:${PORT}`);
+  checkDatabaseConnection();
 });
