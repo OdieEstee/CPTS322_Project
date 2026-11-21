@@ -9,7 +9,10 @@
     "migrate": "node server/migrate-users-txt.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "match": "node server/match-users.js",
+    "test": "node --test server/tests/messaging.test.js",
+    "test:e2e": "node --test server/tests/messaging.e2e.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

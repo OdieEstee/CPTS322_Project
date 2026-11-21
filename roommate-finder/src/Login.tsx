@@ -45,7 +45,8 @@ function Login({ onAuthenticated }: LoginProps) {
       setPassword("");
 
       // Both a new account and a successful login go to the Details page.
-      onAuthenticated(data.user);
+      // The token is kept with the user so later requests can prove who it is.
+      onAuthenticated({ ...data.user, token: data.token });
     } catch (error) {
       setMessage(
         error instanceof Error

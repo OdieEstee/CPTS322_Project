@@ -7,6 +7,14 @@
  * PUT  /api/details/:userId  Creates or updates a user's details.
  * GET  /api/health           Confirms the backend (and database) is running.
  *
+ * Signup and login also return a "token". The browser sends it back as
+ * "Authorization: Bearer <token>" to prove who it is (see auth.js).
+ *
+ * Messaging between matched users lives in its own files:
+ *   auth.js       POST /api/logout and the requireAuth() check
+ *   messaging.js  GET/POST /api/matches/... (inbox and messages)
+ *   store.js      the database queries for sessions, matches and messages
+ *
  * All data is stored in PostgreSQL (it used to be in users.txt).
  * The tables are defined in db/init.sql in the project's top folder:
  *
@@ -21,13 +29,17 @@
  * strictly as data, which prevents SQL injection attacks. Keep doing this
  * for every new query.
  *
- * NOTE: user IDs are not a real authentication mechanism yet.
+ * NOTE: the Details endpoints below still trust the user ID in the URL.
+ * They can be moved onto requireAuth() the same way the messaging routes use it.
  */
 
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcryptjs";
-import { pool, checkDatabaseConnection } from "./db.js";
+import { pool, checkDatabaseConnection, ensureMessagingTables } from "./db.js";
+import { createPgStore } from "./store.js";
+import { createAuthRouter } from "./auth.js";
+import { createMessagingRouter } from "./messaging.js";
 
 const app = express();
 const PORT = 3001;
@@ -39,6 +51,9 @@ const FOREIGN_KEY_VIOLATION = "23503"; // e.g. details for a user that doesn't e
 
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json({ limit: "16kb" }));
+
+// Database functions for sessions, matches and messages (see store.js).
+const store = createPgStore(pool);
 
 
 /* ---------------------------------------------------------------
@@ -149,9 +164,12 @@ app.post("/api/signup", async (req, res) => {
       [email, passwordHash]
     );
 
+    const user = result.rows[0];
+
     res.status(201).json({
       message: "Account created successfully!",
-      user: publicUser(result.rows[0])
+      user: publicUser(user),
+      token: await store.createSession(user.id)
     });
   } catch (error) {
     // The UNIQUE rule on users.email rejected the insert: the email is taken.
@@ -203,7 +221,8 @@ app.post("/api/login", async (req, res) => {
 
     res.json({
       message: "Logged in successfully!",
-      user: publicUser(user)
+      user: publicUser(user),
+      token: await store.createSession(user.id)
     });
   } catch (error) {
     console.error(error);
@@ -319,6 +338,14 @@ app.put("/api/details/:userId", async (req, res) => {
 
 
 /* ---------------------------------------------------------------
+ * Logout + messaging endpoints (see auth.js and messaging.js)
+ * ------------------------------------------------------------- */
+
+app.use(createAuthRouter(store));
+app.use(createMessagingRouter(store));
+
+
+/* ---------------------------------------------------------------
  * Health check + start
  * ------------------------------------------------------------- */
 
@@ -338,5 +365,5 @@ app.get("/api/health", async (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Backend running at http://localhost:${PORT}`);
-  checkDatabaseConnection();
+  checkDatabaseConnection().then(ensureMessagingTables);
 });

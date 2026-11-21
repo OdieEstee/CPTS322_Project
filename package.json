@@ -7,7 +7,10 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",
-    "dev": "concurrently -k -n REACT,EXPRESS \"npm run dev --prefix roommate-finder\" \"npm run server --prefix roommate-finder\""
+    "dev": "concurrently -k -n REACT,EXPRESS \"npm run dev --prefix roommate-finder\" \"npm run server --prefix roommate-finder\"",
+    "match": "npm run match --prefix roommate-finder --",
+    "test": "npm test --prefix roommate-finder",
+    "test:e2e": "npm run test:e2e --prefix roommate-finder"
   },
   "repository": {
     "type": "git",

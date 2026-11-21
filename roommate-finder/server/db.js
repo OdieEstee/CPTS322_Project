@@ -12,6 +12,7 @@
  */
 
 import pg from "pg";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -66,5 +67,22 @@ export async function checkDatabaseConnection() {
         "Start it with:  npm run db:up   (from the project's top folder)\n" +
         `Details: ${error.message}`
     );
+  }
+}
+
+/*
+ * Creates the sessions, matches and messages tables if they don't exist yet,
+ * by running db/messaging.sql (every statement in it is IF NOT EXISTS).
+ * This lets a database created before messaging existed pick up the new
+ * tables without "npm run db:reset", which would delete every account.
+ */
+const MESSAGING_SQL = path.join(__dirname, "..", "..", "db", "messaging.sql");
+
+export async function ensureMessagingTables() {
+  try {
+    await pool.query(await fs.readFile(MESSAGING_SQL, "utf8"));
+    console.log("Messaging tables are ready.");
+  } catch (error) {
+    console.error(`Could not set up the messaging tables: ${error.message}`);
   }
 }

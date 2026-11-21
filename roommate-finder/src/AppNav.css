@@ -1,0 +1,62 @@
+/* Top bar shown after logging in (App.tsx). */
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e6e9e3;
+  background: white;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+}
+
+.app-nav-brand {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  margin-right: 8px;
+  border-radius: 10px;
+  background: #dff3df;
+  color: #27643c;
+  font-weight: 800;
+}
+
+.app-nav button {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #202321;
+  font: inherit;
+  cursor: pointer;
+}
+
+.app-nav button:hover {
+  background: #eef2ec;
+}
+
+.app-nav button.active {
+  background: #dff3df;
+  color: #27643c;
+  font-weight: 650;
+}
+
+.app-nav-user {
+  margin-left: auto;
+  overflow: hidden;
+  color: #6c746d;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+  .app-nav-user {
+    display: none;
+  }
+
+  .app-nav button:last-child {
+    margin-left: auto;
+  }
+}
